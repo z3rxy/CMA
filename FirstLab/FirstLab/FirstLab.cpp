@@ -16,6 +16,7 @@ Progress tracking:
 */
 
 using namespace std;
+
 //
 // Границы для нормального распределения
 //
@@ -361,11 +362,99 @@ double matrixConditionNumber(const vector<vector<double>>& matrix) {
 
     return normA * normAInversed;
 }
+//
+// Функция для проверки положительной определенности матрицы
+//
+bool isPositiveDefinite(const vector< vector<double> >& matrix) {
+    int n = matrix.size();
 
+    for (int i = 1; i <= n; ++i) {
+        vector< vector<double> > submatrix(i, vector<double>(i, 0.0));
 
+        for (int row = 0; row < i; ++row) {
+            for (int col = 0; col < i; ++col) {
+                submatrix[row][col] = matrix[row][col];
+            }
+        }
 
+        double det = determinant(submatrix);
 
+        if (det <= 0) {
+            return false;
+        }
+    }
 
+    return true;
+}
+//
+// Прямой ход метода прямого хода
+//
+vector<double> forwardSqrt(const vector<vector<double>>& L, const vector<double>& b) {
+    int n = L.size();
+    vector<double> y(n, 0.0);
+
+    for (int i = 0; i < n; ++i) {
+        double sum = 0.0;
+        for (int j = 0; j < i; ++j) {
+            sum += L[i][j] * y[j];
+        }
+        y[i] = (b[i] - sum) / L[i][i];
+    }
+
+    return y;
+}
+//
+// Обратный ход метода обратного хода
+//
+vector<double> backwardSqrt(const vector<vector<double>>& LT, const vector<double>& y) {
+    int n = LT.size();
+    vector<double> x(n, 0.0);
+
+    for (int i = n - 1; i >= 0; --i) {
+        double sum = 0.0;
+        for (int j = i + 1; j < n; ++j) {
+            sum += LT[j][i] * x[j];
+        }
+        x[i] = (y[i] - sum) / LT[i][i];
+    }
+
+    return x;
+}
+//
+// Метод квадратного корня (Cholesky decomposition) для решения системы Ax = b
+//
+vector<double> choleskySolve(const vector<vector<double>>& A, const vector<double>& b) {
+    int n = A.size();
+    vector<vector<double>> L(n, vector<double>(n, 0.0));
+
+    // Шаг 1: Разложение Cholesky
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j <= i; ++j) {
+            double sum = 0.0;
+            if (i == j) {
+                for (int k = 0; k < j; ++k) {
+                    sum += pow(L[j][k], 2);
+                }
+                L[j][j] = sqrt(A[j][j] - sum);
+            }
+            else {
+                for (int k = 0; k < j; ++k) {
+                    sum += L[i][k] * L[j][k];
+                }
+                L[i][j] = (A[i][j] - sum) / L[j][j];
+            }
+        }
+    }
+
+    // Шаг 2: Решение системы Ly = b методом прямого хода
+    vector<double> y = forwardSqrt(L, b);
+
+    // Шаг 3: Решение системы L^T x = y методом обратного хода
+    vector<vector<double>> LT = transposeMatrix(L);
+    vector<double> x = backwardSqrt(LT, y);
+
+    return x;
+}
 
 
 int main() {
@@ -374,7 +463,7 @@ int main() {
     vector< vector<double> > A = generateMatrix(matrixSize);
     vector< vector<double> > AInversed = inverseMatrix(A);
 
-    cout << "Generated matrix: " << endl;
+    /*cout << "Generated matrix: " << endl;
     printMatrix(A);
 
     cout << "Inversed matrix: " << endl;
@@ -387,11 +476,24 @@ int main() {
     cout << determinant(A) << endl;
 
     cout << "Matrix condition number:" << endl;
-    cout << matrixConditionNumber(A);
+    cout << matrixConditionNumber(A) << endl;*/
 
-    //vector<double> x = generateSolution(matrixSize);
-    //vector<double> b = generateFreeTerms(matrixSize, A, x);
+
+
+    vector<double> x = generateSolution(matrixSize);
+    vector<double> b = generateFreeTerms(matrixSize, A, x);
+
+    printAll(matrixSize, A, x, b);
+    cout << endl << endl << endl << endl << endl;
     
+    if (isSymmetric(A) && isPositiveDefinite(A)) {
+        vector<double> newX = choleskySolve(A, b);
+        printAll(matrixSize, A, newX, b);
+    }
+    else {
+        cout << "Wrong matrix" << endl;
+    }
+
     /*printAll(matrixSize, A, x, b);
     printInaccuracy(matrixSize, A, x, b);
 
