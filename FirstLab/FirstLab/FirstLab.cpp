@@ -8,24 +8,27 @@ Progress tracking:
 1: Done
 2: Done
 3: Done
-4a:
-4b:
-4c:
-4d:
-4e(only in several cases):
+4а:
+4б: Done
+4в: Done
+4г: Done
+4д(only in several cases): Done
 */
 
 using namespace std;
-
 //
-// Generating matrix A
+// Границы для нормального распределения
+//
+double leftBound = -10.0, rightBound = 10.0;
+//
+// Генерирование матрицы A
 //
 vector< vector<double> > generateMatrix(int matrixSize) {
     vector< vector<double> > matrix(matrixSize, vector<double>(matrixSize, 0.0));
 
     random_device rd;
     mt19937 gen(rd());
-    uniform_real_distribution<double> dis(-100.0, 100.0);
+    uniform_real_distribution<double> dis(leftBound, rightBound);
 
     for (int i = 0; i < matrixSize; ++i) {
         double diagonalSum = 0.0;
@@ -37,20 +40,20 @@ vector< vector<double> > generateMatrix(int matrixSize) {
             }
         }
 
-        matrix[i][i] = diagonalSum + dis(gen);
+        matrix[i][i] = diagonalSum + 10;
     }
 
     return matrix;
 }
 //
-// Generating solution X
+// Генерирование вектора X
 //
 vector<double> generateSolution(int matrixSize) {
     vector<double> solution(matrixSize, 0.0);
 
     random_device rd;
     mt19937 gen(rd());
-    uniform_real_distribution<double> dis(-100.0, 100.0); 
+    uniform_real_distribution<double> dis(leftBound, rightBound);
 
     for (int i = 0; i < matrixSize; ++i) {
         solution[i] = dis(gen);
@@ -59,7 +62,7 @@ vector<double> generateSolution(int matrixSize) {
     return solution;
 }
 //
-// Calculating vector B
+// Вычисление вектора B
 //
 vector<double> generateFreeTerms(int matrixSize, vector< vector<double> > matrix, vector<double> solution) {
     vector<double> freeTerms(matrixSize, 0.0);
@@ -73,7 +76,7 @@ vector<double> generateFreeTerms(int matrixSize, vector< vector<double> > matrix
     return freeTerms;
 }
 //
-// Printing all vectors
+// Вывод всех матриц и векторов
 //
 void printAll(int matrixSize, vector< vector<double> > matrix, vector<double> solution, vector<double> freeTerms) {
     cout << "Generated matrix: " << endl;
@@ -100,6 +103,17 @@ void printAll(int matrixSize, vector< vector<double> > matrix, vector<double> so
     cout << endl;
 }
 //
+// Вывод матрицы
+// 
+void printMatrix(const vector<vector<double>>& matrix) {
+    for (const auto& row : matrix) {
+        for (double elem : row) {
+            cout << fixed << setprecision(2) << elem << "\t";
+        }
+        cout << endl;
+    }
+}
+//
 // Погрешность
 //
 void printInaccuracy(int matrixSize, vector< vector<double> > matrix, vector<double> solution, vector<double> freeTerms) {
@@ -118,16 +132,276 @@ void printInaccuracy(int matrixSize, vector< vector<double> > matrix, vector<dou
     }
 
 }
+//
+// Транспонирование матрицы
+//
+vector< vector<double> > transposeMatrix(const vector< vector<double> >& matrix) {
+    int rows = matrix.size();
+    int cols = matrix[0].size();
+
+    vector< vector<double> > result(cols, vector<double>(rows, 0.0));
+
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            result[j][i] = matrix[i][j];
+        }
+    }
+
+    return result;
+}
+//
+// Умножение матриц
+//
+vector< vector<double> > multiplyMatrices(const vector< vector<double> >& matrix1, const vector< vector<double> >& matrix2) {
+    int rows1 = matrix1.size();
+    int cols1 = matrix1[0].size();
+    int cols2 = matrix2[0].size();
+
+    vector< vector<double> > result(rows1, vector<double>(cols2, 0.0));
+
+    for (int i = 0; i < rows1; ++i) {
+        for (int j = 0; j < cols2; ++j) {
+            for (int k = 0; k < cols1; ++k) {
+                result[i][j] += matrix1[i][k] * matrix2[k][j];
+            }
+        }
+    }
+
+    return result;
+}
+//
+// Преобразование матрицы к симметрической
+//
+vector< vector<double> > transformToSymmetric(const vector< vector<double> >& matrix) {
+    vector< vector<double> > transposedMatrix = transposeMatrix(matrix);
+    vector< vector<double> > result = multiplyMatrices(transposedMatrix, matrix);
+
+    int size = result.size();
+
+    for (int i = 0; i < size; ++i) {
+        double diagonalSum = 0.0;
+
+        for (int j = 0; j < size; ++j) {
+            if (i != j) {
+                diagonalSum += abs(result[i][j]);
+            }
+        }
+
+        result[i][i] += diagonalSum + 1.0;
+    }
+
+    return result;
+}
+//
+// Проверка на строгое диагональное доминирование
+//
+bool hasStrictDiagonalDominance(const vector< vector<double> >& matrix) {
+    int size = matrix.size();
+
+    for (int i = 0; i < size; ++i) {
+        double diagonalElement = abs(matrix[i][i]);
+        double sum = 0.0;
+
+        for (int j = 0; j < size; ++j) {
+            if (i != j) {
+                sum += abs(matrix[i][j]);
+            }
+        }
+
+        if (diagonalElement <= sum) {
+            return false;
+        }
+    }
+
+    return true;
+}
+//
+// Проверка матрицы на симметричность
+//
+bool isSymmetric(const vector< vector<double> >& matrix) {
+    int rows = matrix.size();
+    int cols = matrix[0].size();
+
+    if (rows != cols) {
+        return false;
+    }
+
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            if (matrix[i][j] != matrix[j][i]) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+//
+// Нахождение обратной матрицы
+//
+vector<vector<double>> inverseMatrix(const vector<vector<double>>& matrix) {
+    int size = matrix.size();
+
+    vector<vector<double>> augmentedMatrix(size, vector<double>(2 * size, 0.0));
+
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            augmentedMatrix[i][j] = matrix[i][j];
+            augmentedMatrix[i][j + size] = (i == j) ? 1.0 : 0.0;
+        }
+    }
+
+    for (int i = 0; i < size; ++i) {
+        double pivot = augmentedMatrix[i][i];
+
+        for (int j = 0; j < 2 * size; ++j) {
+            augmentedMatrix[i][j] /= pivot;
+        }
+
+        for (int k = 0; k < size; ++k) {
+            if (k != i) {
+                double factor = augmentedMatrix[k][i];
+                for (int j = 0; j < 2 * size; ++j) {
+                    augmentedMatrix[k][j] -= factor * augmentedMatrix[i][j];
+                }
+            }
+        }
+    }
+
+    vector<vector<double>> inverse(size, vector<double>(size, 0.0));
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            inverse[i][j] = augmentedMatrix[i][j + size];
+        }
+    }
+
+    return inverse;
+}
+//
+// Функция для вычисления минора матрицы
+//
+vector<vector<double>> getMinor(const vector<vector<double>>& matrix, int row, int col) {
+    int size = matrix.size();
+    vector<vector<double>> minor(size - 1, vector<double>(size - 1, 0.0));
+
+    for (int i = 0, p = 0; i < size; ++i) {
+        if (i != row) {
+            for (int j = 0, q = 0; j < size; ++j) {
+                if (j != col) {
+                    minor[p][q++] = matrix[i][j];
+                }
+            }
+            ++p;
+        }
+    }
+
+    return minor;
+}
+//
+// Функция для вычисления определителя матрицы
+//
+double determinant(const vector<vector<double>>& matrix) {
+    int size = matrix.size();
+
+    if (size == 1) {
+        return matrix[0][0];
+    }
+
+    if (size == 2) {
+        return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+    }
+
+    double det = 0.0;
+
+    for (int i = 0; i < size; ++i) {
+        vector<vector<double>> minor = getMinor(matrix, 0, i);
+        det += (i % 2 == 0 ? 1 : -1) * matrix[0][i] * determinant(minor);
+    }
+
+    return det;
+}
+//
+// Функция для вычисления нормы матрицы
+//
+double matrixNorm(const vector<vector<double>>& matrix) {
+    int rows = matrix.size();
+    int cols = matrix[0].size();
+
+    double norm = 0.0;
+
+    for (int j = 0; j < cols; ++j) {
+        double colSum = 0.0;
+        for (int i = 0; i < rows; ++i) {
+            colSum += abs(matrix[i][j]);
+        }
+        norm = max(norm, colSum);
+    }
+
+    return norm;
+}
+//
+// Функция для вычисления числа обусловленности матрицы
+//
+double matrixConditionNumber(const vector<vector<double>>& matrix) {
+    double normA = matrixNorm(matrix);
+
+    if (normA == 0.0) {
+        cout << "Матрица вырожденная" << endl;
+        return numeric_limits<double>::infinity();
+    }
+
+    vector<vector<double>> matrixInverse = inverseMatrix(matrix);
+
+    if (matrixInverse.empty()) {
+        cout << "Обратной матрицы не существует" << endl;
+        return numeric_limits<double>::infinity();
+    }
+
+    double normAInversed = matrixNorm(matrixInverse);
+
+    return normA * normAInversed;
+}
+
+
+
+
+
+
 
 int main() {
-    int matrixSize = 4;
+    int matrixSize = 3;
 
     vector< vector<double> > A = generateMatrix(matrixSize);
-    vector<double> x = generateSolution(matrixSize);
-    vector<double> b = generateFreeTerms(matrixSize, A, x);
+    vector< vector<double> > AInversed = inverseMatrix(A);
 
-    printAll(matrixSize, A, x, b);
+    cout << "Generated matrix: " << endl;
+    printMatrix(A);
+
+    cout << "Inversed matrix: " << endl;
+    printMatrix(AInversed);
+
+    cout << "Checking: " << endl;
+    printMatrix(multiplyMatrices(A, AInversed));
+
+    cout << "Determinant: " << endl;
+    cout << determinant(A) << endl;
+
+    cout << "Matrix condition number:" << endl;
+    cout << matrixConditionNumber(A);
+
+    //vector<double> x = generateSolution(matrixSize);
+    //vector<double> b = generateFreeTerms(matrixSize, A, x);
+    
+    /*printAll(matrixSize, A, x, b);
     printInaccuracy(matrixSize, A, x, b);
 
+    cout << "DiagDominance: " << hasStrictDiagonalDominance(A) << endl;
+    cout << "Symmetric: " << isSymmetric(A) << endl;
+
+    A = transformToSymmetric(A);
+
+    cout << "DiagDominance: " << hasStrictDiagonalDominance(A) << endl;
+    cout << "Symmetric: " << isSymmetric(A) << endl;*/
+    
     return 0;
 }
