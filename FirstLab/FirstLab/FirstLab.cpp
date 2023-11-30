@@ -131,7 +131,7 @@ void printInaccuracy(int matrixSize, vector< vector<double> > matrix, vector<dou
 
         cout << freeTerms[i] - sum << endl;
     }
-
+    cout << endl << "---------------------------------------------" << endl;
 }
 //
 // Транспонирование матрицы
@@ -166,6 +166,34 @@ vector< vector<double> > multiplyMatrices(const vector< vector<double> >& matrix
                 result[i][j] += matrix1[i][k] * matrix2[k][j];
             }
         }
+    }
+
+    return result;
+}
+//
+// Умножение матрицы на вектор
+//
+vector<double> multiplyMatrixVector(const vector<vector<double>>& A, const vector<double>& b) {
+    int n = A.size();
+    vector<double> result(n, 0.0);
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            result[i] += A[i][j] * b[j];
+        }
+    }
+
+    return result;
+}
+//
+// Вычитаение векторов
+//
+vector<double> subtractVectors(const vector<double>& x, const vector<double>& y) {
+    int n = x.size();
+    vector<double> result(n);
+
+    for (int i = 0; i < n; ++i) {
+        result[i] = x[i] - y[i];
     }
 
     return result;
@@ -341,6 +369,32 @@ double matrixNorm(const vector<vector<double>>& matrix) {
     return norm;
 }
 //
+// Функция для вычисления нормы вектора
+// 
+double vectorNorm(const vector<double>& v) {
+    int n = v.size();
+    double sum = 0.0;
+
+    for (int i = 0; i < n; ++i) {
+        sum += v[i] * v[i];
+    }
+
+    return sqrt(sum);
+}
+//
+// Скалярное произведение векторов
+// 
+double dotProduct(const vector<double>& v1, const vector<double>& v2) {
+    int n = v1.size();
+    double result = 0.0;
+
+    for (int i = 0; i < n; ++i) {
+        result += v1[i] * v2[i];
+    }
+
+    return result;
+}
+//
 // Функция для вычисления числа обусловленности матрицы
 //
 double matrixConditionNumber(const vector<vector<double>>& matrix) {
@@ -387,46 +441,65 @@ bool isPositiveDefinite(const vector< vector<double> >& matrix) {
     return true;
 }
 //
-// Прямой ход метода квадратного корня
+// Методом вращений
 //
-vector<double> forwardSqrt(const vector<vector<double>>& L, const vector<double>& b) {
-    int n = L.size();
-    vector<double> y(n, 0.0);
+vector<double> rotations(vector<vector<double>>& A, vector<double>& b) {
+    int size = A.size();
+    vector<vector<double>> A_rotations = A;
+    vector<double> b_rotations = b;
 
-    for (int i = 0; i < n; ++i) {
-        double sum = 0.0;
-        for (int j = 0; j < i; ++j) {
-            sum += L[i][j] * y[j];
+    if (!isSymmetric(A)) {
+        cout << "Matrix is not symmetric. Applying Symmetric transform" << endl;
+
+        vector<vector<double>> AT = transposeMatrix(A);
+        A = multiplyMatrices(AT, A);
+
+        vector<double> newB(size, 0.0);
+        for (int i = 0; i < size; ++i) {
+            for (int j = 0; j < size; ++j) {
+                newB[i] += AT[i][j] * b[j];
+            }
         }
-        y[i] = (b[i] - sum) / L[i][i];
+        b = newB;
     }
 
-    return y;
-}
-//
-// Обратный ход метода квадратного корня
-//
-vector<double> backwardSqrt(const vector<vector<double>>& LT, const vector<double>& y) {
-    int n = LT.size();
-    vector<double> x(n, 0.0);
+    for (int j = 0; j < size - 1; j++) {
+        for (int i = j + 1; i < size; i++) {
+            double c = A_rotations[j][j], s = A_rotations[i][j];
+            double sqr = sqrt(pow(A_rotations[j][j], 2) + pow(A_rotations[i][j], 2));
 
-    for (int i = n - 1; i >= 0; --i) {
-        double sum = 0.0;
-        for (int j = i + 1; j < n; ++j) {
-            sum += LT[j][i] * x[j];
+            for (int k = j; k < size; k++) {
+                double temp = A_rotations[j][k];
+                A_rotations[j][k] = (c * A_rotations[j][k] + s * A_rotations[i][k]) / sqr;
+                A_rotations[i][k] = (-s * temp + c * A_rotations[i][k]) / sqr;
+            }
+
+            double temp = b_rotations[j];
+            b_rotations[j] = (c * b_rotations[j] + s * b_rotations[i]) / sqr;
+            b_rotations[i] = (-s * temp + c * b_rotations[i]) / sqr;
         }
-        x[i] = (y[i] - sum) / LT[i][i];
     }
 
-    return x;
+    for (int i = size - 1; i > 0; i--) {
+        for (int j = i - 1; j >= 0; j--) {
+            b_rotations[j] -= (b_rotations[i] * A_rotations[j][i] / A_rotations[i][i]);
+            A_rotations[j][i] = 0;
+        }
+        b_rotations[i] /= A_rotations[i][i];
+        A_rotations[i][i] = 1;
+    }
+
+    b_rotations[0] /= A_rotations[0][0];
+    A_rotations[0][0] = 1;
+
+    return b_rotations;
 }
 //
-// Метод квадратного корня для решения системы Ax = b(огромная погрешность?)
+// Метод квадратного корня
 //
-vector<double> methodSqrt(vector<vector<double>>& A, vector<double>& b) {
+vector<double> methodSqrt(vector<vector<double>>& A,vector<double>& b) {
     int n = A.size();
-    vector<vector<double>> L(n, vector<double>(n, 0.0));
-    
+
     if (!isSymmetric(A)) {
         cout << "Matrix is not symmetric. Applying Symmetric transform" << endl;
         //A = transformToSymmetric(A);
@@ -451,17 +524,20 @@ vector<double> methodSqrt(vector<vector<double>>& A, vector<double>& b) {
         return answer;
     }
 
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j <= i; ++j) {
+    vector<vector<double>> L(n, vector<double>(n, 0.0));
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j <= i; j++) {
             double sum = 0.0;
-            if (i == j) {
-                for (int k = 0; k < j; ++k) {
+
+            if (j == i) {
+                for (int k = 0; k < j; k++) {
                     sum += pow(L[j][k], 2);
                 }
                 L[j][j] = sqrt(A[j][j] - sum);
             }
             else {
-                for (int k = 0; k < j; ++k) {
+                for (int k = 0; k < j; k++) {
                     sum += L[i][k] * L[j][k];
                 }
                 L[i][j] = (A[i][j] - sum) / L[j][j];
@@ -469,73 +545,114 @@ vector<double> methodSqrt(vector<vector<double>>& A, vector<double>& b) {
         }
     }
 
-    vector<double> y = forwardSqrt(L, b);
+    vector<double> y(n, 0.0);
+    for (int i = 0; i < n; i++) {
+        double sum = 0.0;
+        for (int j = 0; j < i; j++) {
+            sum += L[i][j] * y[j];
+        }
+        y[i] = (b[i] - sum) / L[i][i];
+    }
 
-    vector<vector<double>> LT = transposeMatrix(L);
-    vector<double> x = backwardSqrt(LT, y);
+    vector<double> x(n, 0.0);
+    for (int i = n - 1; i >= 0; i--) {
+        double sum = 0.0;
+        for (int j = i + 1; j < n; j++) {
+            sum += L[j][i] * x[j];
+        }
+        x[i] = (y[i] - sum) / L[i][i];
+    }
 
     return x;
 }
 //
-// Методом вращений(нужно проверить)
+// Метод простой итерации
 //
-vector<double> rotations(vector<vector<double>>& A, vector<double>& b) {
-    int size = A.size();
+vector<double> simpleIteration(vector<vector<double>>& A,vector<double>& b, int maxIterations, double tolerance) {
+    int n = A.size();
 
-    if (!isSymmetric(A)) {
-        cout << "Matrix is not symmetric. Applying Symmetric transform" << endl;
-        //A = transformToSymmetric(A);
+    vector<double> x(n, 0.0);
 
-        vector<vector<double>> AT = transposeMatrix(A);
-        A = multiplyMatrices(AT, A);
+    for (int iter = 0; iter < maxIterations; ++iter) {
+        vector<double> x_new(n, 0.0);
 
-        vector<double> newB(size, 0.0);
-
-        for (int i = 0; i < size; ++i) {
-            for (int j = 0; j < size; ++j) {
-                newB[i] += AT[i][j] * b[j];
+        for (int i = 0; i < n; ++i) {
+            double sum = 0.0;
+            for (int j = 0; j < n; ++j) {
+                if (j != i) {
+                    sum += A[i][j] * x[j];
+                }
             }
+            x_new[i] = (b[i] - sum) / A[i][i];
         }
 
-        b = newB;
-    }
+        double error = 0.0;
+        for (int i = 0; i < n; ++i) {
+            error += abs(x_new[i] - x[i]);
+        }
 
-    for (int j = 0; j < size - 1; j++) {
-        for (int i = j + 1; i < size; i++) {
-            double c = abs(A[j][j]), s = abs(A[i][j]);
-            for (int k = j; k < size; k++) {
-                double temp = A[j][k];
-                A[j][k] = c * A[j][k] + s * A[i][k];
-                A[i][k] = -s * temp + c * A[i][k];
-            }
-            double temp = b[j];
-            b[j] = c * b[j] + s * b[i];
-            b[i] = -s * temp + c * b[i];
+        x = x_new;
+
+        if (error < tolerance) {
+            cout << "Converged in " << iter + 1 << " iterations" << endl;
+            return x;
         }
     }
 
-    for (int i = size - 1; i > 0; i--) {
-        for (int j = i - 1; j >= 0; j--) {
-            b[j] -= (b[i] * A[j][i] / A[i][i]);
-            A[j][i] = 0;
-        }
-        b[i] /= A[i][i];
-        A[i][i] = 1;
-    }
-
-    b[0] /= A[0][0];
-    A[0][0] = 1;
-
-    return b;
+    cout << "Did not converge within the specified number of iterations" << endl;
+    return x;
 }
+//
+// Метод минимальный невязок
+//
+vector<double> minResidual(vector<vector<double>>& A,vector<double>& b, int maxIterations, double tolerance) {
+    int n = A.size();
+
+    vector<double> x(n, 0.0);
+    vector<double> r = b;
+
+    for (int iter = 0; iter < maxIterations; ++iter) {
+        vector<double> Ax = multiplyMatrixVector(A, x);
+        vector<double> residual = subtractVectors(b, Ax);
+
+        double residualNorm = vectorNorm(residual);
+        if (residualNorm < tolerance) {
+            cout << "Converged in " << iter + 1 << " iterations." << endl;
+
+            return x;
+        }
+
+        vector<double> Ar = multiplyMatrixVector(A, residual);
+        double alpha = dotProduct(residual, residual) / dotProduct(residual, Ar);
+
+        for (int i = 0; i < n; ++i) {
+            x[i] += alpha * residual[i];
+        }
+
+        for (int i = 0; i < n; ++i) {
+            r[i] = residual[i] - alpha * Ar[i];
+        }
+    }
+
+    cout << "Did not converge within the specified number of iterations." << endl;
+
+    return x;
+}
+
+
 
 int main() {
     int matrixSize = 3;
+    int maxIterations = 100;
+    double tolerance = 1e-6;
 
     vector< vector<double> > A = generateMatrix(matrixSize);
-    vector< vector<double> > AInversed = inverseMatrix(A);
+    vector<double> x = generateSolution(matrixSize);
+    vector<double> b = generateFreeTerms(matrixSize, A, x);
 
-    /*cout << "Generated matrix: " << endl;
+    /*vector< vector<double> > AInversed = inverseMatrix(A);
+
+    cout << "Generated matrix: " << endl;
     printMatrix(A);
 
     cout << "Inversed matrix: " << endl;
@@ -550,33 +667,36 @@ int main() {
     cout << "Matrix condition number:" << endl;
     cout << matrixConditionNumber(A) << endl;*/
 
-
-
-    vector<double> x = generateSolution(matrixSize);
-    vector<double> b = generateFreeTerms(matrixSize, A, x);
-
     printAll(matrixSize, A, x, b);
     printInaccuracy(matrixSize, A, x, b);
     cout << endl << endl << endl;
-    
-    
 
-    vector<double> newX = rotations(A, b);
+    cout << "METHOD OF SIMPLE ITERATION" << endl;
+    vector<double> xSimpleIter = simpleIteration(A, b, maxIterations, tolerance);
+    printAll(matrixSize, A, xSimpleIter, b);
+    printInaccuracy(matrixSize, A, xSimpleIter, b);
 
-    printAll(matrixSize, A, newX, b);
-    printInaccuracy(matrixSize, A, newX, b);
+    cout << "METHOD OF MINIMUM RESIDUALS" << endl;
+    vector<double> xMinRes = minResidual(A, b, maxIterations, tolerance);
+    printAll(matrixSize, A, xMinRes, b);
+    printInaccuracy(matrixSize, A, xMinRes, b);
+
+    cout << "METHOD OF ROTATIONS" << endl;
+    vector<double> xRotations = rotations(A, b);
+    printAll(matrixSize, A, xRotations, b);
+    printInaccuracy(matrixSize, A, xRotations, b);
+
+    cout << "METHOD OF SQRT" << endl;
+    vector<double> xSqrt = methodSqrt(A, b);
+    printAll(matrixSize, A, xSqrt, b);
+    printInaccuracy(matrixSize, A, xSqrt, b);
 
 
-    /*printAll(matrixSize, A, x, b);
-    printInaccuracy(matrixSize, A, x, b);
+    // Unknown result
+    /*cout << "METHOD OF SIMPLE ITERATION" << endl;
+    xSimpleIter = simpleIteration(A, b, maxIterations, tolerance);
+    printAll(matrixSize, A, xSimpleIter, b);
+    printInaccuracy(matrixSize, A, xSimpleIter, b);*/
 
-    cout << "DiagDominance: " << hasStrictDiagonalDominance(A) << endl;
-    cout << "Symmetric: " << isSymmetric(A) << endl;
-
-    A = transformToSymmetric(A);
-
-    cout << "DiagDominance: " << hasStrictDiagonalDominance(A) << endl;
-    cout << "Symmetric: " << isSymmetric(A) << endl;*/
-    
     return 0;
 }
