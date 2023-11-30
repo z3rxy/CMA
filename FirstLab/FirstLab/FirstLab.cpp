@@ -10,7 +10,7 @@ Progress tracking:
 3: Done
 4а:
 4б: Done
-4в: Done
+4в: Done/
 4г: Done
 4д(only in several cases): Done
 */
@@ -41,7 +41,7 @@ vector< vector<double> > generateMatrix(int matrixSize) {
             }
         }
 
-        matrix[i][i] = diagonalSum + 10;
+        matrix[i][i] = diagonalSum + 1;
     }
 
     return matrix;
@@ -115,15 +115,15 @@ void printMatrix(const vector<vector<double>>& matrix) {
     }
 }
 //
-// Погрешность
+// Погрешность(вектор невязки)
 //
 void printInaccuracy(int matrixSize, vector< vector<double> > matrix, vector<double> solution, vector<double> freeTerms) {
     cout << "Inaccuracy:" << endl;
 
-    int sum;
+    double sum;
 
     for (int i = 0; i < matrixSize; ++i) {
-        sum = 0;
+        sum = 0.0;
 
         for (int j = 0; j < matrixSize; ++j) {
             sum += matrix[i][j] * solution[j];
@@ -387,7 +387,7 @@ bool isPositiveDefinite(const vector< vector<double> >& matrix) {
     return true;
 }
 //
-// Прямой ход метода прямого хода
+// Прямой ход метода квадратного корня
 //
 vector<double> forwardSqrt(const vector<vector<double>>& L, const vector<double>& b) {
     int n = L.size();
@@ -404,7 +404,7 @@ vector<double> forwardSqrt(const vector<vector<double>>& L, const vector<double>
     return y;
 }
 //
-// Обратный ход метода обратного хода
+// Обратный ход метода квадратного корня
 //
 vector<double> backwardSqrt(const vector<vector<double>>& LT, const vector<double>& y) {
     int n = LT.size();
@@ -421,13 +421,36 @@ vector<double> backwardSqrt(const vector<vector<double>>& LT, const vector<doubl
     return x;
 }
 //
-// Метод квадратного корня (Cholesky decomposition) для решения системы Ax = b
+// Метод квадратного корня для решения системы Ax = b(огромная погрешность?)
 //
-vector<double> choleskySolve(const vector<vector<double>>& A, const vector<double>& b) {
+vector<double> methodSqrt(vector<vector<double>>& A, vector<double>& b) {
     int n = A.size();
     vector<vector<double>> L(n, vector<double>(n, 0.0));
+    
+    if (!isSymmetric(A)) {
+        cout << "Matrix is not symmetric. Applying Symmetric transform" << endl;
+        //A = transformToSymmetric(A);
 
-    // Шаг 1: Разложение Cholesky
+        vector<vector<double>> AT = transposeMatrix(A);
+        A = multiplyMatrices(AT, A);
+
+        vector<double> newB(n, 0.0);
+
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                newB[i] += AT[i][j] * b[j];
+            }
+        }
+
+        b = newB;
+    }
+
+    if (!isPositiveDefinite(A)) {
+        cout << "Matrix is not positive defined." << endl;
+        vector<double> answer(n, 0.0);
+        return answer;
+    }
+
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j <= i; ++j) {
             double sum = 0.0;
@@ -446,16 +469,65 @@ vector<double> choleskySolve(const vector<vector<double>>& A, const vector<doubl
         }
     }
 
-    // Шаг 2: Решение системы Ly = b методом прямого хода
     vector<double> y = forwardSqrt(L, b);
 
-    // Шаг 3: Решение системы L^T x = y методом обратного хода
     vector<vector<double>> LT = transposeMatrix(L);
     vector<double> x = backwardSqrt(LT, y);
 
     return x;
 }
+//
+// Методом вращений(нужно проверить)
+//
+vector<double> rotations(vector<vector<double>>& A, vector<double>& b) {
+    int size = A.size();
 
+    if (!isSymmetric(A)) {
+        cout << "Matrix is not symmetric. Applying Symmetric transform" << endl;
+        //A = transformToSymmetric(A);
+
+        vector<vector<double>> AT = transposeMatrix(A);
+        A = multiplyMatrices(AT, A);
+
+        vector<double> newB(size, 0.0);
+
+        for (int i = 0; i < size; ++i) {
+            for (int j = 0; j < size; ++j) {
+                newB[i] += AT[i][j] * b[j];
+            }
+        }
+
+        b = newB;
+    }
+
+    for (int j = 0; j < size - 1; j++) {
+        for (int i = j + 1; i < size; i++) {
+            double c = abs(A[j][j]), s = abs(A[i][j]);
+            for (int k = j; k < size; k++) {
+                double temp = A[j][k];
+                A[j][k] = c * A[j][k] + s * A[i][k];
+                A[i][k] = -s * temp + c * A[i][k];
+            }
+            double temp = b[j];
+            b[j] = c * b[j] + s * b[i];
+            b[i] = -s * temp + c * b[i];
+        }
+    }
+
+    for (int i = size - 1; i > 0; i--) {
+        for (int j = i - 1; j >= 0; j--) {
+            b[j] -= (b[i] * A[j][i] / A[i][i]);
+            A[j][i] = 0;
+        }
+        b[i] /= A[i][i];
+        A[i][i] = 1;
+    }
+
+    b[0] /= A[0][0];
+    A[0][0] = 1;
+
+    return b;
+}
 
 int main() {
     int matrixSize = 3;
@@ -484,15 +556,16 @@ int main() {
     vector<double> b = generateFreeTerms(matrixSize, A, x);
 
     printAll(matrixSize, A, x, b);
-    cout << endl << endl << endl << endl << endl;
+    printInaccuracy(matrixSize, A, x, b);
+    cout << endl << endl << endl;
     
-    if (isSymmetric(A) && isPositiveDefinite(A)) {
-        vector<double> newX = choleskySolve(A, b);
-        printAll(matrixSize, A, newX, b);
-    }
-    else {
-        cout << "Wrong matrix" << endl;
-    }
+    
+
+    vector<double> newX = rotations(A, b);
+
+    printAll(matrixSize, A, newX, b);
+    printInaccuracy(matrixSize, A, newX, b);
+
 
     /*printAll(matrixSize, A, x, b);
     printInaccuracy(matrixSize, A, x, b);
