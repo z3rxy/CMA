@@ -3,18 +3,6 @@
 #include <random>
 #include <iomanip>
 
-/*
-Progress tracking:
-1: Done
-2: Done
-3: Done
-4а:
-4б: Done
-4в: Done/
-4г: Done
-4д(only in several cases): Done
-*/
-
 using namespace std;
 
 //
@@ -638,8 +626,6 @@ vector<double> minResidual(vector<vector<double>>& A,vector<double>& b, int maxI
 
     return x;
 }
-
-
 
 int main() {
     int matrixSize = 3;
