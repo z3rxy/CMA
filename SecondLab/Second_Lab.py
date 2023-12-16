@@ -81,6 +81,28 @@ def compare_eigenvalues(matrix, tol=1e-9, max_iter=1000):
         print("")
         print("")
 
+def power_method(matrix, tol=1e-6, max_iter=1000):
+    n = len(matrix)
+    
+    v = np.random.rand(n)
+    v /= np.linalg.norm(v)
+
+    for _ in range(max_iter):
+        Av = np.dot(matrix, v)
+        
+        max_element_index = np.argmax(np.abs(Av))
+        max_element = Av[max_element_index]
+        
+        v = Av / max_element
+        
+        if np.abs(max_element) < tol:
+            break
+
+    v /= np.linalg.norm(v)
+
+    eigenvalue = np.dot(v, np.dot(matrix, v))
+
+    return eigenvalue, v
 
 #n = int(input("Введите значение n (n >= 10): "))
 n = 10
@@ -96,3 +118,4 @@ for row in matrix:
 print('Is matrix symmetric:',is_symmetric(matrix))
 
 compare_eigenvalues(matrix)
+print(power_method(matrix))
