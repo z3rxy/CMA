@@ -60,7 +60,6 @@ def compare_eigenvalues(matrix, tol=1e-9, max_iter=1000):
 
     eigenvalues_numpy, eigenvectors_numpy = np.linalg.eig(np.array(matrix))
 
-    # Сортировка собственных значений и векторов
     eigenvalues_jacobi_sorted = np.sort(eigenvalues_jacobi)
     eigenvectors_jacobi_sorted = eigenvectors_jacobi[:, eigenvalues_jacobi.argsort()]
 
