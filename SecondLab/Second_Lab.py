@@ -60,7 +60,7 @@ def compare_eigenvalues(matrix, tol=1e-9, max_iter=1000):
 
     eigenvalues_numpy, eigenvectors_numpy = np.linalg.eig(np.array(matrix))
 
-    eigenvalues_jacobi_sorted = np.sort(eigenvalues_jacobi)
+    eigenvalues_rotations_sorted = np.sort(eigenvalues_jacobi)
     eigenvectors_jacobi_sorted = eigenvectors_jacobi[:, eigenvalues_jacobi.argsort()]
 
     eigenvalues_numpy_sorted = np.sort(eigenvalues_numpy)
@@ -68,8 +68,9 @@ def compare_eigenvalues(matrix, tol=1e-9, max_iter=1000):
 
     for i in range(len(eigenvalues_jacobi)):
         print(f"lambda_{i + 1}:")
-        print(f"Метод вращений: {eigenvalues_jacobi_sorted[i]}")
-        print(f"NumPy:           {eigenvalues_numpy_sorted[i]}")
+        print(f"Метод вращений: {eigenvalues_rotations_sorted[i]}")
+        print(f"NumPy: {eigenvalues_numpy_sorted[i]}")
+        print("Отклонение:", eigenvalues_numpy_sorted[i] - eigenvalues_rotations_sorted[i])
         print("")
 
         print(f"Собственный к lambda_{i + 1}:")
