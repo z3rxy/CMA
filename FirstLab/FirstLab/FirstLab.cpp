@@ -111,13 +111,13 @@ void printInaccuracy(int matrixSize, vector< vector<double> > matrix, vector<dou
     double sum;
 
     for (int i = 0; i < matrixSize; ++i) {
-        sum = 0.0;
+        sum = 0.00000000000000;
 
         for (int j = 0; j < matrixSize; ++j) {
             sum += matrix[i][j] * solution[j];
         }
 
-        cout << freeTerms[i] - sum << endl;
+        cout << fixed << setprecision(15) << freeTerms[i] - sum << endl;
     }
     cout << endl << "---------------------------------------------" << endl;
 }
@@ -629,12 +629,21 @@ vector<double> minResidual(vector<vector<double>>& A,vector<double>& b, int maxI
 
 int main() {
     int matrixSize = 3;
-    int maxIterations = 100;
-    double tolerance = 1e-6;
+    int maxIterations = 100000;
+    double tolerance = 1e-15;
 
-    vector< vector<double> > A = generateMatrix(matrixSize);
+    /*vector< vector<double> > A = generateMatrix(matrixSize);
     vector<double> x = generateSolution(matrixSize);
-    vector<double> b = generateFreeTerms(matrixSize, A, x);
+    vector<double> b = generateFreeTerms(matrixSize, A, x);*/
+    vector<vector<double>> A = {
+        {15.61, -9.53, 5.08},
+        {0.97, 2.91, -0.94},
+        {6.37, 8.69, 16.05}
+    };
+
+    vector<double> x = { 9.52, 2.27, -8.20 };
+
+    vector<double> b = { 85.32, 23.49, -51.29 };
 
     /*vector< vector<double> > AInversed = inverseMatrix(A);
 
@@ -679,7 +688,7 @@ int main() {
 
 
     // Unknown result
-    /*cout << "METHOD OF SIMPLE ITERATION" << endl;
+   /* cout << "METHOD OF SIMPLE ITERATION" << endl;
     xSimpleIter = simpleIteration(A, b, maxIterations, tolerance);
     printAll(matrixSize, A, xSimpleIter, b);
     printInaccuracy(matrixSize, A, xSimpleIter, b);*/
